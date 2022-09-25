@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from extractors.video_extractor import *
-from urllib.parse import urlparse
-
+from .extractors.video_extractor import VideoExtractor,VideoServer
 
 
 class Episode:
@@ -16,12 +14,14 @@ class Season:
         self.season_number: str = season_number
         self.link: str = link
 class ShowResponse:
-    def __init__(self) -> None:
-        title: str
-        link: str
-        cover_url: str
+    def __init__(self,title: str,link: str,is_tv: bool,info: str) -> None:
+        self.title: str = title
+        self.link: str = link
+        self.is_tv: bool = is_tv
+        self.info: str = info
 
 class BaseParser(ABC):
+    max_search_result: int = 10
 
     @abstractmethod
     def load_seasons(self,show_link: str) -> List[Season]:
@@ -40,5 +40,5 @@ class BaseParser(ABC):
         pass
 
     @abstractmethod
-    def search(self,title: str) -> List[ShowResponse]:
+    def search(self,query: str) -> List[ShowResponse]:
         pass

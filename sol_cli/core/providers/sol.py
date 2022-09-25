@@ -1,18 +1,18 @@
-from base_parser import BaseParser, Episode, Season
-from typing import List, Dict
+from .base_parser import BaseParser, Episode, Season, ShowResponse
+from typing import List, Dict,Optional
 import requests
 import lxml.html
-from extractors.video_extractor import *
-from extractors.upcloud import *
-from extractors.vidcloud import *
+from .extractors.video_extractor import *
+from .extractors.upcloud import *
+from .extractors.vidcloud import *
 
 
-class sol(BaseParser):
+class Sol(BaseParser):
     name : str = "sol"
     host_url: str = "https://solarmovie.pe"
     server_extracters : dict = {
-            "UpCloud": UpCloud,
-            "Vidcloud": Vidcloud
+            "Server UpCloud": UpCloud,
+            "Server Vidcloud": Vidcloud
             #"Streamlare": None,
             #"MixDrop": None,
             #"Hydrax": None
@@ -64,6 +64,30 @@ class sol(BaseParser):
         return servers
 
 
-    def get_vide_extractor(self,server: VideoServer) -> VideoExtractor:
-        return self.server_extracters[server.name]
+    def get_vide_extractor(self,server: VideoServer) -> Optional[VideoExtractor]:
+        if server.name == "Server UpCloud":
+            return UpCloud(server)
+        elif server.name == "Server Vidcloud":
+            return Vidcloud(server)
+        else:
+            return None
 
+    def search(self, query: str) -> List[ShowResponse]:
+        search_url: str = self.host_url + "/search/"
+        query = query.strip().replace(" ","-")
+        r: requests.Response = requests.get(search_url + query,headers=self.headers)
+        html_doc: lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        search_results: List[lxml.html.HtmlElement] = html_doc.cssselect(".flw-item")
+        show_responses: List[ShowResponse] = []
+        for search_result in search_results:
+            link_tag: lxml.html.HtmlElement = search_result.cssselect(".film-poster > a")[0]
+            title: str = link_tag.get("title")
+            link: str = link_tag.get("href")
+            film_info_tags: List[lxml.html.HtmlElement] = search_result.cssselect(".film-detail .fd-infor span")
+            film_info: str = film_info_tags[0].text
+            is_tv: bool = True if film_info_tags[-1].text == "TV" else False
+            show_responses.append(ShowResponse(title,self.host_url + link,is_tv,film_info))
+            if len(show_responses) >= self.max_search_result:
+                break
+        return show_responses
+        
