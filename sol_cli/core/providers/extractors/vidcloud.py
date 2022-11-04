@@ -18,13 +18,9 @@ class Vidcloud(VideoExtractor):
         r: requests.Response = s.get(self.server.embed,headers=self.headers)
         r: requests.Response = s.get(self.sources_base_url + embed,headers=self.headers)
         video_info: Dict = r.json()
-        #print(video_info)
-        #print(r.url)
-        #print("cookis",s.cookies.get_dict())
-        if video_info.get("encrypted") and video_info.get("encrypted") == True:
-            dynamic_key = s.cookies.get_dict().get("dynamic_key")
+        if(isinstance(video_info.get("sources"), str)):
             key: str = s.get(self.key_url).text
-            decrypted_urls = decrypt.decrypt_export(video_info["sources"],key + dynamic_key)
+            decrypted_urls = decrypt.decrypt_export(video_info["sources"],key)
             video_sources: List[Dict] = json.loads(decrypted_urls)
         else:
             video_sources: List[Dict] = video_info["sources"]
@@ -33,5 +29,6 @@ class Vidcloud(VideoExtractor):
         for video_source in video_sources:
             self.videos.append(Video("",True,video_source["file"]))
         for track in video_tracks:
+            if(track["kind"] == "thumbnails"):continue
             self.subtitles.append(Subtitle(track["label"],track["file"]))
         return VideoContainer(self.videos,self.subtitles)

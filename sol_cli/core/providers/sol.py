@@ -10,13 +10,6 @@ from .extractors.vidcloud import *
 class Sol(BaseParser):
     name : str = "sol"
     host_url: str = "https://solarmovie.pe"
-    server_extracters : dict = {
-            "Server UpCloud": UpCloud,
-            "Server Vidcloud": Vidcloud
-            #"Streamlare": None,
-            #"MixDrop": None,
-            #"Hydrax": None
-            }
     headers =  {
      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,like Gecko) Chrome/75.0.3770.142 Safari/537.36',
      'X-Requested-With': 'XMLHttpRequest'
