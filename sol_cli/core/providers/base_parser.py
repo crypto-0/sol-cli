@@ -32,7 +32,10 @@ class BaseParser(ABC):
         pass
 
     @abstractmethod
-    def load_video_servers(self,episode_link: str) -> List[VideoServer]:
+    def load_movie_servers(self,show_link: str) -> List[VideoServer]:
+        pass
+    @abstractmethod
+    def load_episode_servers(self,episode_link: str) -> List[VideoServer]:
         pass
 
     @abstractmethod

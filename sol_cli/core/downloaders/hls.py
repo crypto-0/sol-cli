@@ -1,4 +1,5 @@
 import logging
+import httpx
 
 import regex
 import yarl
@@ -94,7 +95,7 @@ def resolve_stream(session, logger, q_dicts, quality_string):
             return content_response, origin_m3u8
 
 
-def hls_yield(session, q_dicts, quality_string, auto_retry=2, *, continuation_index=1):
+def hls_yield(session, q_dicts, quality_string, auto_retry=5, *, continuation_index=1):
 
     logger = logging.getLogger("hls/internal")
 
@@ -136,11 +137,18 @@ def hls_yield(session, q_dicts, quality_string, auto_retry=2, *, continuation_in
         if not stream.is_absolute():
             stream = base_uri.join(stream)
 
-        ts_response = session.get(
-            stream.human_repr(), headers=origin_m3u8.get("headers", {})
-        )
+        ts_response = None
+        for _ in range(auto_retry):
+            try:
+                ts_response = session.get(
+                stream.human_repr(), headers=origin_m3u8.get("headers", {})
+            )
+                break
+            except:
+                print("Failed to download segment retrying")
+                session = httpx.Client()
 
-        ts_response.raise_for_status()
+        if(ts_response == None):raise TimeoutError
         ts_data = ts_response.content
 
         if encryption_state:

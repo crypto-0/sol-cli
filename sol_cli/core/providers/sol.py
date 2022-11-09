@@ -15,6 +15,21 @@ class Sol(BaseParser):
      'X-Requested-With': 'XMLHttpRequest'
      }
 
+    def load_movie_servers(self,show_link: str) -> list[VideoServer]:
+        movie_server_url : str = "https://solarmovie.pe/ajax/movie/episodes/"
+        server_embed_url: str = "https://solarmovie.pe/ajax/get_link/"
+        r : requests.Response = requests.get(movie_server_url + show_link,headers=self.headers)
+        html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        server_elements : List[lxml.html.HtmlElement] = html_doc.cssselect(".nav-item a")
+        servers: List[VideoServer] = [] 
+        for server_element in server_elements:
+            server_id: str = server_element.get("data-linkid")
+            server_title: str = server_element.get("title")
+            r: requests.Response = requests.get(server_embed_url + server_id,headers=self.headers)
+            embed: str = r.json()["link"]
+            servers.append(VideoServer(server_title,embed))
+        return servers
+
     def load_seasons(self,show_link: str) -> List[Season]:
         season_url: str = "https://solarmovie.pe/ajax/v2/tv/seasons/" + show_link
         r: requests.Response = requests.get(season_url,headers=self.headers)
@@ -41,7 +56,7 @@ class Sol(BaseParser):
         return episodes
 
 
-    def load_video_servers(self,episode_link: str) -> List[VideoServer]:
+    def load_episode_servers(self,episode_link: str) -> List[VideoServer]:
         episodes_server_url : str = "https://solarmovie.pe/ajax/v2/episode/servers/"
         server_embed_url: str = "https://solarmovie.pe/ajax/get_link/"
         r : requests.Response = requests.get(episodes_server_url + episode_link,headers=self.headers)
@@ -58,9 +73,9 @@ class Sol(BaseParser):
 
 
     def get_vide_extractor(self,server: VideoServer) -> Optional[VideoExtractor]:
-        if server.name == "Server UpCloud":
+        if server.name == "Server UpCloud" or server.name == "UpCloud":
             return UpCloud(server)
-        elif server.name == "Server Vidcloud":
+        elif server.name == "Server Vidcloud" or server.name == "Vidcloud":
             return Vidcloud(server)
         else:
             return None

@@ -13,7 +13,6 @@ class UpCloud(VideoExtractor):
     key_url = "https://raw.githubusercontent.com/consumet/rapidclown/dokicloud/key.txt"
     def extract(self) -> VideoContainer:
         s = requests.Session()
-        #embed = self.server.embed.rsplit("/",1)[-1]
         embed = self.server.embed.rsplit("/",1)[-1].rstrip("?z=")
         r: requests.Response = s.get(self.server.embed,headers=self.headers)
         r: requests.Response = s.get(self.sources_base_url + embed,headers=self.headers)

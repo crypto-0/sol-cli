@@ -6,6 +6,24 @@ import sys
 import re
 import httpx
 from ..downloaders.handle import handle_download
+import subprocess
+from tqdm import tqdm
+
+def convert_secs(text):
+        if isinstance(text, float):
+            num = str(text)
+            nums = num.split('.')
+        else:
+            nums = text.split(':')
+        if len(nums) == 2:
+            st_sn = int(nums[0]) * 60 + float(nums[1])
+            return int(st_sn)
+        elif len(nums) == 3:
+            st_sn = int(nums[0]) * 3600 + int(nums[1]) * 60 + float(nums[2])
+            return int(st_sn)
+        else:
+            #raise ValueError("Not correct time")
+            return -1
 
 def print_info(items: list,item_type:int):
     alternate_color: bool = False
@@ -138,7 +156,7 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
         for episode_range in episodes_to_download:
            for idx in range(episode_range[0],episode_range[1] +1):
                if(episode_servers.get(idx) !=None):continue
-               servers = sol.load_video_servers(episodes[idx].link)
+               servers = sol.load_episode_servers(episodes[idx].link)
                episode_servers[idx]=servers;
         click.secho("Getting extracters...",fg=color)
         episode_extracters: dict= {}
@@ -165,7 +183,7 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
         show_path = pathlib.Path("{dir}/{title_name}/{season_name}".format(dir=dir,title_name=title_name,season_name=season_name))
         pathlib.Path.mkdir(show_path,parents=True,exist_ok=True)
         click.secho("Downloading videos...",fg=color)
-        with httpx.Client() as client:
+        with httpx.Client(timeout=15) as client:
             for episode in episode_containers:
                 episode_name ="{title}-s{season}-e{episode}".format(title=title_name,season=season,episode=str(episode + 1).zfill(2))
                 for episode_container in episode_containers[episode]:
@@ -173,8 +191,101 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
                         if(not episode_container.videos):continue
                         url = episode_container.videos[0].url
                         handle_download(client,url,sol.headers,show_path,episode_name)
-                        break
-                    except:
-                        pass
+                        episode_location_ts = str(show_path) + "/" + episode_name +".ts"
+                        episode_location_mp4 = str(show_path) + "/" + episode_name +".mp4"
+                        ffprobecmd = ["ffprobe", "-v","error","-show_entries" ,"format=duration","-of" ,"default=noprint_wrappers=1:nokey=1","-i", episode_location_ts]
+                        ffmpegcmd = ["ffmpeg","-y", "-v","quiet","-stats","-i", episode_location_ts,"-c","copy",episode_location_mp4]
+                        ffprobe = subprocess.run(ffprobecmd,stdout=subprocess.PIPE,shell=False,universal_newlines=True)
+                        duration = float(ffprobe.stdout.rstrip())
+                        duration = int(duration)
+                        p = subprocess.Popen(ffmpegcmd,
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.STDOUT,
+                                             universal_newlines=True
+                                             )
 
+                        desc = episode_location_ts + " to mp4"
+                        pbar = tqdm(total=duration,leave=True,desc=desc)
+                        for line in iter(p.stdout.readline,''):
+                            if line:
+                                time = re.search(r"\btime=\b",line)
+                                if time:
+                                    start_time = time.span()[-1]
+                                    time_as_float = convert_secs(line[start_time:start_time + 11])
+                                    if time_as_float < duration:
+                                        pbar.n = time_as_float
+                                    else:
+                                        pbar.n= duration
+
+                                    pbar.refresh()
+
+                        pbar.close()
+                        return_code = p.poll()
+                        if not return_code:
+                            pathlib.Path.unlink(pathlib.Path(episode_location_ts))
+                        break
+                    except Exception as e:
+                        print(e)
+    else:
+        click.secho("Getting movie servers...",fg=color)
+        link: str = (q_results[int(choice) - 1].link).rsplit("-",1)[-1]
+        servers = sol.load_movie_servers(link)
+        click.secho("Getting extracters...",fg=color)
+        extractors = []
+        for server in servers:
+            extractor = sol.get_vide_extractor(server=server)
+            if(extractor !=None):
+                extractors.append(extractor)
+        click.secho("Getting videos...",fg=color)
+        videoContainers = []
+        for extractor in extractors:
+            videoContainer = extractor.extract()
+            videoContainers.append(videoContainer)
+        title_name=q_results[int(index) -1].title.replace(" ","-")
+        if not dir:
+            dir = "."
+        movie_path = pathlib.Path("{dir}/{title_name}".format(dir=dir,title_name=title_name))
+        pathlib.Path.mkdir(movie_path,parents=True,exist_ok=True)
+        click.secho("Downloading videos...",fg=color)
+        with httpx.Client() as client:
+            for container in videoContainers:
+                try:
+                    if(not container.videos):continue
+                    url = container.videos[0].url
+                    handle_download(client,url,sol.headers,movie_path,title_name)
+                    movie_location_ts = str(movie_path) + "/" + title_name +".ts"
+                    movie_location_mp4 = str(movie_path) + "/" + title_name +".mp4"
+                    ffprobecmd = ["ffprobe", "-v","error","-show_entries" ,"format=duration","-of" ,"default=noprint_wrappers=1:nokey=1","-i", movie_location_ts]
+                    ffmpegcmd = ["ffmpeg","-y", "-v","quiet","-stats","-i", movie_location_ts,"-c","copy",movie_location_mp4]
+                    ffprobe = subprocess.run(ffprobecmd,stdout=subprocess.PIPE,shell=False,universal_newlines=True)
+                    duration = float(ffprobe.stdout.rstrip())
+                    duration = int(duration)
+                    p = subprocess.Popen(ffmpegcmd,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT,
+                                         universal_newlines=True
+                                         )
+
+                    desc = movie_location_ts + " to mp4"
+                    pbar = tqdm(total=duration,leave=True,desc=desc)
+                    for line in iter(p.stdout.readline,''):
+                        if line:
+                            time = re.search(r"\btime=\b",line)
+                            if time:
+                                start_time = time.span()[-1]
+                                time_as_float = convert_secs(line[start_time:start_time + 11])
+                                if time_as_float < duration:
+                                    pbar.n = time_as_float
+                                else:
+                                    pbar.n= duration
+
+                                pbar.refresh()
+
+                    pbar.close()
+                    return_code = p.poll()
+                    if not return_code:
+                        pathlib.Path.unlink(pathlib.Path(movie_location_ts))
+                    break
+                except Exception as e:
+                    print(e)
 
