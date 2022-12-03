@@ -14,7 +14,6 @@ class Vidcloud(VideoExtractor):
     def extract(self) -> VideoContainer:
         s = requests.Session()
         embed = self.server.embed.rsplit("/",1)[-1].rstrip("?z=")
-        #r: requests.Response = requests.get(self.sources_base_url + embed,headers=self.headers)
         r: requests.Response = s.get(self.server.embed,headers=self.headers)
         r: requests.Response = s.get(self.sources_base_url + embed,headers=self.headers)
         video_info: Dict = r.json()

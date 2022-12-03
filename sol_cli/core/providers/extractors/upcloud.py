@@ -10,7 +10,8 @@ class UpCloud(VideoExtractor):
      'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,like Gecko) Chrome/75.0.3770.142 Safari/537.36',
      'X-Requested-With': 'XMLHttpRequest'
      }
-    key_url = "https://raw.githubusercontent.com/consumet/rapidclown/dokicloud/key.txt"
+    #key_url = "https://raw.githubusercontent.com/consumet/rapidclown/dokicloud/key.txt"
+    key_url = "https://raw.githubusercontent.com/consumet/rapidclown/rabbitstream/key.txt"
     def extract(self) -> VideoContainer:
         s = requests.Session()
         embed = self.server.embed.rsplit("/",1)[-1].rstrip("?z=")
