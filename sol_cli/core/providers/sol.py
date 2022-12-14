@@ -72,13 +72,21 @@ class Sol(BaseParser):
         return servers
 
 
-    def get_vide_extractor(self,server: VideoServer) -> Optional[VideoExtractor]:
+    def get_video_extractor(self,server: VideoServer) -> Optional[VideoExtractor]:
         if server.name == "Server UpCloud" or server.name == "UpCloud":
             return UpCloud(server)
         elif server.name == "Server Vidcloud" or server.name == "Vidcloud":
             return Vidcloud(server)
         else:
             return None
+    def get_title_and_release_year(self,show_link: str) -> tuple:
+        r = requests.get(show_link,headers=self.headers)
+        html_doc : lxml.html.HtmlElement = lxml.html.fromstring(r.text)
+        element: lxml.html.HtmlElement = html_doc.cssselect(".row-line")[0]
+        release = element.text_content().split("Released: ")[-1].strip()
+        year_released = release.split("-")[0]
+        title = show_link.split("watch-")[-1].split("-free")[0].replace("-"," ")
+        return (title,year_released)
 
     def search(self, query: str) -> List[ShowResponse]:
         search_url: str = self.host_url + "/search/"

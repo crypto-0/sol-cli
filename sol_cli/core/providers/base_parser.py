@@ -39,9 +39,12 @@ class BaseParser(ABC):
         pass
 
     @abstractmethod
-    def get_vide_extractor(self,server: VideoServer) -> VideoExtractor:
+    def get_video_extractor(self,server: VideoServer) -> VideoExtractor:
         pass
 
     @abstractmethod
     def search(self,query: str) -> List[ShowResponse]:
+        pass
+    @abstractmethod
+    def get_title_and_release_year(self,show_link: str) -> tuple:
         pass

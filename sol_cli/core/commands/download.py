@@ -163,7 +163,7 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
         for episode  in episode_servers:
             episode_extracters[episode] = []
             for server in episode_servers[episode]:
-                extractor = sol.get_vide_extractor(server=server)
+                extractor = sol.get_video_extractor(server=server)
                 if(extractor !=None):episode_extracters[episode].append(extractor)
                 
         
@@ -174,18 +174,19 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
             for extractor in episode_extracters[episode]:
                 episode_containers[episode].append(extractor.extract())
 
-        title_name=q_results[int(index) -1].title.replace(" ","-")
+        #title_name=q_results[int(index) -1].title.replace(" ","-")
+        title_name,release_year = sol.get_title_and_release_year(q_results[int(index)-1].link)
         season = season.zfill(2)
         season_name = "Season " + season
         if not dir:
             dir = "."
 
-        show_path = pathlib.Path("{dir}/{title_name}/{season_name}".format(dir=dir,title_name=title_name,season_name=season_name))
+        show_path = pathlib.Path("{dir}/{title_name} ({release_year})/{season_name}".format(dir=dir,title_name=title_name,release_year=release_year,season_name=season_name))
         pathlib.Path.mkdir(show_path,parents=True,exist_ok=True)
         click.secho("Downloading videos...",fg=color)
         with httpx.Client(timeout=15) as client:
             for episode in episode_containers:
-                episode_name ="{title}-s{season}-e{episode}".format(title=title_name,season=season,episode=str(episode + 1).zfill(2))
+                episode_name ="{title} ({release_year}) - s{season}-e{episode}".format(title=title_name,release_year=release_year,season=season,episode=str(episode + 1).zfill(2))
                 for episode_container in episode_containers[episode]:
                     try:
                         if(not episode_container.videos):continue
@@ -233,7 +234,7 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
         click.secho("Getting extracters...",fg=color)
         extractors = []
         for server in servers:
-            extractor = sol.get_vide_extractor(server=server)
+            extractor = sol.get_video_extractor(server=server)
             if(extractor !=None):
                 extractors.append(extractor)
         click.secho("Getting videos...",fg=color)
@@ -241,10 +242,12 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
         for extractor in extractors:
             videoContainer = extractor.extract()
             videoContainers.append(videoContainer)
-        title_name=q_results[int(index) -1].title.replace(" ","-")
+        #title_name=q_results[int(index) -1].title.replace(" ","-")
+        title_name,release_year = sol.get_title_and_release_year(q_results[int(index)-1].link)
         if not dir:
             dir = "."
-        movie_path = pathlib.Path("{dir}/{title_name}".format(dir=dir,title_name=title_name))
+
+        movie_path = pathlib.Path("{dir}/{title_name} ({release_year})".format(dir=dir,title_name=title_name,release_year=release_year))
         pathlib.Path.mkdir(movie_path,parents=True,exist_ok=True)
         click.secho("Downloading videos...",fg=color)
         with httpx.Client() as client:
@@ -252,9 +255,9 @@ def sol_cli_download(query:str,index,season,episode_ranges,quality,dir):
                 try:
                     if(not container.videos):continue
                     url = container.videos[0].url
-                    handle_download(client,url,sol.headers,movie_path,title_name)
-                    movie_location_ts = str(movie_path) + "/" + title_name +".ts"
-                    movie_location_mp4 = str(movie_path) + "/" + title_name +".mp4"
+                    handle_download(client,url,sol.headers,movie_path,movie_path.name)
+                    movie_location_ts = str(movie_path) + "/" + movie_path.name +".ts"
+                    movie_location_mp4 = str(movie_path) + "/" + movie_path.name +".mp4"
                     ffprobecmd = ["ffprobe", "-v","error","-show_entries" ,"format=duration","-of" ,"default=noprint_wrappers=1:nokey=1","-i", movie_location_ts]
                     ffmpegcmd = ["ffmpeg","-y", "-v","quiet","-stats","-i", movie_location_ts,"-c","copy",movie_location_mp4]
                     ffprobe = subprocess.run(ffprobecmd,stdout=subprocess.PIPE,shell=False,universal_newlines=True)

@@ -12,8 +12,6 @@ from requests.utils import requote_uri
 
 
 BLOCK_SIZE = 16
-#KEY = b"LXgIVP&PorO68Rq7dTx8N^lP!Fa5sGJ^*XK"
-KEY = b"267041df55ca2b36f2e322d05ee2c9cf"
 
 # From stackoverflow https://stackoverflow.com/questions/36762098/how-to-decrypt-password-from-javascript-cryptojs-aes-encryptpassword-passphras
 def pad(data):
@@ -48,7 +46,7 @@ def decrypt(encrypted, passphrase):
     return unpad(aes.decrypt(encrypted[16:]))
 
 def decrypt_export(url,key,escape=False):
-    decrypt_ed = decrypt((url).encode('utf-8'), key).decode('utf-8').lstrip(' ')
+    decrypt_ed = decrypt(url, key).decode('utf-8','ignore').lstrip(' ')
     escap_ed = requote_uri(decrypt_ed) if escape else decrypt_ed
     return escap_ed
 
